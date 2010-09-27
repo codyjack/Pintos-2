@@ -1,5 +1,4 @@
 /* sleep_list.h */
-// blank
 
 #ifndef SLEEP_LIST_H
 #define SLEEP_LIST_H

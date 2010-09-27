@@ -1,5 +1,4 @@
 /* sleep_list.c */
-//blank
 
 #include "threads/malloc.h"
 #include "devices/sleep_list.h"
