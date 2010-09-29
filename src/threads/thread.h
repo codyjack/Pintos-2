@@ -109,6 +109,7 @@ extern bool thread_mlfqs;
 
 void thread_init (void);
 void thread_start (void);
+bool is_thread (struct thread *) UNUSED;
 
 void thread_tick (void);
 void thread_print_stats (void);

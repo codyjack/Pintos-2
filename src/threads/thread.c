@@ -65,7 +65,6 @@ static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
 static void init_thread (struct thread *, const char *name, int priority);
-static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void schedule_tail (struct thread *prev);
@@ -209,6 +208,9 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  if (t->priority > thread_current()->priority)
+    thread_yield();
+
   return tid;
 }
 
@@ -345,7 +347,10 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  struct thread* cur = thread_current();
+  cur->priority = new_priority;
+  if ((!list_empty(&ready_list)) && (cur->priority < list_entry(list_front (&ready_list), struct thread, elem)->priority))
+    thread_yield();
 }
 
 /* Returns the current thread's priority. */
@@ -450,7 +455,7 @@ running_thread (void)
 }
 
 /* Returns true if T appears to point to a valid thread. */
-static bool
+bool
 is_thread (struct thread *t)
 {
   return t != NULL && t->magic == THREAD_MAGIC;
