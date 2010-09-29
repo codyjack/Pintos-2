@@ -139,6 +139,6 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-void findpri (struct thread *t);
+void findpri (struct thread *t,struct list* l);
 
 #endif /* threads/thread.h */

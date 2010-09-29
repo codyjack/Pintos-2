@@ -248,7 +248,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   //list_push_back (&ready_list, &t->elem);
-  findpri(t);
+  findpri(t,&ready_list);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -319,7 +319,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    findpri(cur);
+    findpri(cur,&ready_list);
     //list_push_back (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
@@ -594,10 +594,10 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 void
-findpri(struct thread *t)
+findpri(struct thread *t, struct list* l)
 {
-  struct list_elem *current = list_begin(&ready_list);
-    while(current != list_end(&ready_list))
+  struct list_elem *current = list_begin(l);
+    while(current != list_end(l))
       {
         if(t->priority > list_entry(current,struct thread, elem)->priority)
         {
