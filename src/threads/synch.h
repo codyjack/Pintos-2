@@ -23,7 +23,8 @@ struct lock
     struct thread *holder;      /* Thread holding lock (for debugging). */
     struct semaphore semaphore; /* Binary semaphore controlling access. */
     int original_priority;      /* Holder's original priority to be 
-                                   reverted to after priority donation  */
+                                   reverted to after priority donation. */
+    struct list* donors         /* List of threads that have donated priority. */
   };
 
 void lock_init (struct lock *);
@@ -32,6 +33,10 @@ bool lock_try_acquire (struct lock *);
 void lock_release (struct lock *);
 bool lock_held_by_current_thread (const struct lock *);
 void lock_donate_priority(struct thread*);
+<<<<<<< Updated upstream
+=======
+void lock_revert_priority(struct lock*);
+>>>>>>> Stashed changes
 
 /* Condition variable. */
 struct condition 

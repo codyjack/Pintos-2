@@ -189,6 +189,7 @@ lock_init (struct lock *lock)
   ASSERT (lock != NULL);
 
   lock->holder = NULL;
+  list_init(lock->donors);
   sema_init (&lock->semaphore, 1);
 }
 
@@ -231,13 +232,18 @@ bool
 lock_try_acquire (struct lock *lock)
 {
   bool success;
+  struct thread* cur = thread_current();
 
   ASSERT (lock != NULL);
   ASSERT (!lock_held_by_current_thread (lock));
 
   success = sema_try_down (&lock->semaphore);
   if (success)
-    lock->holder = thread_current ();
+  {
+    lock->holder = cur;
+    lock->original_priority = cur->priority;
+    cur->lock = NULL;
+  }
   return success;
 }
 
@@ -252,7 +258,7 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  lock->holder->priority = lock->original_priority;
+  lock_revert_priority(lock);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
@@ -278,15 +284,42 @@ lock_donate_priority(struct thread* t)
   ASSERT(NULL != t->lock);
   ASSERT(NULL != t->lock->holder);
 
-  if (t->priority > t->lock->holder->priority)
+  if (t->priority > t->lock->holder->priority) // priority of t needs to be donated to holder
   {
     t->lock->holder->priority = t->priority;
+    findpri(t, t->lock->donors);
     // TODO:  need to re-order the lists that holder is in. How?
-    if (NULL != t->lock->holder->lock)
+    if (NULL != t->lock->holder->lock) // holder is also blocked; it's new priority needs to be donated as well
+    // also means holder is in the lock's semaphore's waiters list
     {
       lock_donate_priority(t->lock->holder);
     }
+    else // holder is not blocked by lock, must be part of ready_list or another semaphore's waiters list
+    {
+
+    }
   }
+}
+
+void
+lock_revert_priority(struct lock* lock)
+{
+  struct thread* head_donor;
+
+  if (list_empty(lock->donors))
+  {
+    lock->holder->priority = lock->original_priority;
+    return;
+  }
+
+  head_donor = list_entry(list_pop_front(lock->donors), struct thread, elem);
+
+  if (head_donor->lock != NULL && head_donor->lock == lock) // head of donors is blocked by lock
+  {
+    lock->holder->priority = head_donor->priority;
+    return;
+  }
+  lock_revert_priority(lock); // head donor is not blocked, so check if the next on the list is blocked.
 }
 
 
