@@ -259,6 +259,7 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   lock_revert_priority(lock);
+  lock->holder->priority = lock->original_priority;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
@@ -320,6 +321,8 @@ lock_revert_priority(struct lock* lock)
     return;
   }
   lock_revert_priority(lock); // head donor is not blocked, so check if the next on the list is blocked.
+}
+>>>>>>> 0c3b11a1dd3ecd51368569664e23cb616cd673da
 }
 
 
