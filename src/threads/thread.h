@@ -92,6 +92,8 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+    struct lock* lock;                  /* Lock this thread is waiting on. Will be NULL
+                                           if thread is not waiting on a lock. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

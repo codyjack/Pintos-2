@@ -203,12 +203,22 @@ lock_init (struct lock *lock)
 void
 lock_acquire (struct lock *lock)
 {
+  struct thread* cur = thread_current ();
+
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  if (!lock_try_acquire(lock))
+  {
+    cur->lock = lock;
+    lock_donate_priority(cur);
+  }
+
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  lock->holder = cur;
+  lock->original_priority = cur->priority;
+  cur->lock = NULL;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -242,6 +252,7 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  lock->holder->priority = lock->original_priority;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
@@ -256,6 +267,28 @@ lock_held_by_current_thread (const struct lock *lock)
 
   return lock->holder == thread_current ();
 }
+
+/* Donates thread t's priority to the thread holding the lock
+   it is waiting on. Recursively called on lock holder if it is
+   also waiting on a lock. */
+void
+lock_donate_priority(struct thread t)
+{
+  ASSERT(is_thread(t));
+  ASSERT(NULL != t->lock);
+  ASSERT(NULL != t->lock->holder);
+
+  if (t->priority > t->lock->holder->priority)
+  {
+    t->lock->holder->priority = t->priority;
+    // TODO:  need to re-order the lists that holder is in. How?
+    if (NULL != t->lock->holder->lock)
+    {
+      lock_donate_priority(t->lock->holder);
+    }
+  }
+}
+
 
 /* One semaphore in a list. */
 struct semaphore_elem 
