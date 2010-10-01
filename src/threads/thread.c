@@ -593,18 +593,20 @@ allocate_tid (void)
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
+/* Iterates through list l, finding the best place to insert
+   thread t based on the priority of the thread. */
 void
 findpri(struct thread *t, struct list* l)
 {
   struct list_elem *current = list_begin(l);
-    while(current != list_end(l))
-      {
-        if(t->priority > list_entry(current,struct thread, elem)->priority)
-        {
-          break;
-        }
-        current = (list_next(current));
-      }
-      list_insert(current, &(t->elem));
+  while(current != list_end(l))
+  {
+    if(t->priority > list_entry(current, struct thread, elem)->priority)
+    {
+      break;
+    }
+    current = (list_next(current));
+  }
+  list_insert(current, &(t->elem));
 }
 
