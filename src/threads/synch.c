@@ -245,7 +245,7 @@ lock_try_acquire (struct lock *lock)
   if (success)
   {
     lock->holder = cur;
-    //lock->original_priority = cur->priority;
+    lock->original_priority = cur->priority;
     //cur->wait_lock = NULL;
   }
   return success;
@@ -262,7 +262,7 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  //lock_revert_priority(lock);
+  lock_revert_priority(lock);
   //lock->holder->priority = lock->original_priority;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
