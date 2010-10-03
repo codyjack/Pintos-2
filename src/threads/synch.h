@@ -24,7 +24,7 @@ struct lock
     struct semaphore semaphore; /* Binary semaphore controlling access. */
     int original_priority;      /* Holder's original priority to be
                                    reverted to after priority donation. */
-    struct list* donors;        /* List of threads that have donated priority.
+    struct list donors;         /* List of threads that have donated priority.
                                    reverted to after priority donation  */
   };
 
@@ -35,6 +35,7 @@ void lock_release (struct lock *);
 bool lock_held_by_current_thread (const struct lock *);
 void lock_donate_priority(struct thread*);
 void lock_revert_priority(struct lock*);
+void add_to_donor_list(struct thread*, struct lock*);
 
 /* Condition variable. */
 struct condition 

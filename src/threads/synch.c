@@ -189,7 +189,7 @@ lock_init (struct lock *lock)
   ASSERT (lock != NULL);
 
   lock->holder = NULL;
-  list_init(lock->donors);
+  list_init(&lock->donors);
   sema_init (&lock->semaphore, 1);
 }
 
@@ -210,16 +210,20 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  //if (!lock_try_acquire(lock))
-  //{
-    //cur->lock = lock;
-    //lock_donate_priority(cur);
-  //}
+  if (!lock_try_acquire(lock))
+  {
+    cur->wait_lock = lock;
+    if (lock->holder->priority < cur->priority)
+    {
+      //lock->holder->priority = cur->priority;
+      lock_donate_priority(cur);
+    }
+    sema_down (&lock->semaphore);
 
-  sema_down (&lock->semaphore);
-  lock->holder = cur;
-  lock->original_priority = cur->priority;
-  cur->lock = NULL;
+    lock->holder = cur;
+    lock->original_priority = cur->priority;
+    cur->wait_lock = NULL;
+  }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -241,8 +245,8 @@ lock_try_acquire (struct lock *lock)
   if (success)
   {
     lock->holder = cur;
-    lock->original_priority = cur->priority;
-    cur->lock = NULL;
+    //lock->original_priority = cur->priority;
+    //cur->wait_lock = NULL;
   }
   return success;
 }
@@ -258,8 +262,8 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  lock_revert_priority(lock);
-  lock->holder->priority = lock->original_priority;
+  //lock_revert_priority(lock);
+  //lock->holder->priority = lock->original_priority;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
@@ -275,31 +279,35 @@ lock_held_by_current_thread (const struct lock *lock)
   return lock->holder == thread_current ();
 }
 
-/* Donates thread t's priority to the thread holding the lock
-   it is waiting on. Recursively called on lock holder if it is
-   also waiting on a lock. */
 void
 lock_donate_priority(struct thread* t)
 {
   ASSERT(is_thread(t));
-  ASSERT(NULL != t->lock);
-  ASSERT(NULL != t->lock->holder);
+  ASSERT(NULL != t->wait_lock);
+  ASSERT(NULL != t->wait_lock->holder);
 
-  if (t->priority > t->lock->holder->priority) // priority of t needs to be donated to holder
+  if (t->priority > t->wait_lock->holder->priority)
   {
-    t->lock->holder->priority = t->priority;
-    findpri(t, t->lock->donors);
-    // TODO:  need to re-order the lists that holder is in. How?
-    if (NULL != t->lock->holder->lock) // holder is also blocked; it's new priority needs to be donated as well
-    // also means holder is in the lock's semaphore's waiters list
+    t->wait_lock->holder->priority = t->priority;
+    //add_to_donor_list(t, t->wait_lock);
+    if (t->wait_lock->holder->wait_lock != NULL)
     {
-      lock_donate_priority(t->lock->holder);
-    }
-    else // holder is not blocked by lock, must be part of ready_list or another semaphore's waiters list
-    {
-
+      lock_donate_priority(t->wait_lock->holder);
     }
   }
+}
+
+void
+add_to_donor_list(struct thread* t, struct lock* lock)
+{
+  struct list_elem* i;
+  struct list_elem* end = list_end(&lock->donors);
+  for (i=list_begin(&lock->donors); i != end; i = list_next(i))
+  {
+    if (t->priority > list_entry(i, struct thread, donor_elem)->priority)
+      break;
+  }
+  list_insert(i, &(t->donor_elem));
 }
 
 void
@@ -307,23 +315,22 @@ lock_revert_priority(struct lock* lock)
 {
   struct thread* head_donor;
 
-  if (list_empty(lock->donors))
+  if (list_empty(&lock->donors))
   {
     lock->holder->priority = lock->original_priority;
     return;
   }
 
-  head_donor = list_entry(list_pop_front(lock->donors), struct thread, elem);
+  head_donor = list_entry(list_pop_front(&lock->donors), struct thread, donor_elem);
 
-  if (head_donor->lock != NULL && head_donor->lock == lock) // head of donors is blocked by lock
+  if (head_donor->wait_lock != NULL && head_donor->wait_lock == lock) // head of donors is blocked by lock
   {
     lock->holder->priority = head_donor->priority;
     return;
   }
   lock_revert_priority(lock); // head donor is not blocked, so check if the next on the list is blocked.
 }
->>>>>>> 0c3b11a1dd3ecd51368569664e23cb616cd673da
-}
+
 
 
 /* One semaphore in a list. */
