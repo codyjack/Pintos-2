@@ -92,8 +92,9 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    struct lock* lock;                  /* Lock this thread is waiting on. Will be NULL
+    struct lock* wait_lock;                  /* Lock this thread is waiting on. Will be NULL
                                            if thread is not waiting on a lock. */
+    struct list_elem donor_elem;        /* List element used for the donor list in locks */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -112,7 +113,7 @@ extern bool thread_mlfqs;
 
 void thread_init (void);
 void thread_start (void);
-bool is_thread (struct thread *) UNUSED;
+bool is_thread (struct thread *);
 
 void thread_tick (void);
 void thread_print_stats (void);
