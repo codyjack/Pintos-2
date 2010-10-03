@@ -248,7 +248,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   //list_push_back (&ready_list, &t->elem);
-  findpri(t,&ready_list);
+  thread_insert_sorted(t,&ready_list);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -319,7 +319,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    findpri(cur,&ready_list);
+    thread_insert_sorted(cur,&ready_list);
     //list_push_back (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
@@ -357,22 +357,21 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+  return thread_current()->priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
-{
-  /* Not yet implemented. */
+thread_set_nice (int nice) 
+{ 
+  thread_current()->thread_nice = nice;
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->thread_nice;
 }
 
 /* Returns 100 times the system load average. */
@@ -474,6 +473,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
+  t->thread_nice = 0;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
@@ -596,7 +596,7 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 /* Iterates through list l, finding the best place to insert
    thread t based on the priority of the thread. */
 void
-findpri(struct thread *t, struct list* l)
+thread_insert_sorted(struct thread *t, struct list* l)
 {
   struct list_elem *current = list_begin(l);
   while(current != list_end(l))

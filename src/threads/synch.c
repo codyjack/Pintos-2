@@ -69,7 +69,7 @@ sema_down (struct semaphore *sema)
   while (sema->value == 0) 
     {
       //list_push_back (&sema->waiters, &thread_current ()->elem);
-      findpri(thread_current(),&(sema->waiters));
+      thread_insert_sorted(thread_current(),&(sema->waiters));
       thread_block ();
     }
   sema->value--;
@@ -177,7 +177,7 @@ sema_test_helper (void *sema_)
    value of 1.  The difference between a lock and such a
    semaphore is twofold.  First, a semaphore can have a value
    greater than 1, but a lock can only be owned by a single
-   thread at a time.  Second, a semaphore does not have an owner,
+   thread at a time.  Second, a semaphore does not have an owner,&
    meaning that one thread can "down" the semaphore and then
    another one "up" it, but with a lock the same thread must both
    acquire and release it.  When these restrictions prove
@@ -295,6 +295,7 @@ struct semaphore_elem
   {
     struct list_elem elem;              /* List element. */
     struct semaphore semaphore;         /* This semaphore. */
+    int priority;
   };
 
 /* Initializes condition variable COND.  A condition variable
@@ -306,6 +307,18 @@ cond_init (struct condition *cond)
   ASSERT (cond != NULL);
 
   list_init (&cond->waiters);
+}
+
+static bool
+cond_insert_priority(const struct list_elem *prev, const struct list_elem *next, void *aux)
+{
+  struct semaphore_elem *p;
+  struct semaphore_elem *n;
+
+  p = list_entry(prev, struct semaphore_elem, elem);
+  n = list_entry(next, struct semaphore_elem, elem);
+
+  return (n->priority < p->priority);
 }
 
 /* Atomically releases LOCK and waits for COND to be signaled by
@@ -339,7 +352,9 @@ cond_wait (struct condition *cond, struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   
   sema_init (&waiter.semaphore, 0);
-  list_push_back (&cond->waiters, &waiter.elem);
+  waiter.priority = thread_current()->priority;
+  list_insert_ordered(&cond->waiters, &waiter.elem, cond_insert_priority, NULL);
+  
   lock_release (lock);
   sema_down (&waiter.semaphore);
   lock_acquire (lock);
@@ -380,3 +395,4 @@ cond_broadcast (struct condition *cond, struct lock *lock)
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
 }
+
