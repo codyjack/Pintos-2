@@ -654,7 +654,7 @@ thread_insert_donorlist(struct thread* donor, struct thread* donee)
   struct list_elem *current = list_begin(donorlist);
   while(current != list_end(donorlist))
   {
-    if(t->priority > list_entry(current, struct thread, donor_elem)->priority)
+    if(donee->priority > list_entry(current, struct thread, donor_elem)->priority)
     {
       break;
     }
