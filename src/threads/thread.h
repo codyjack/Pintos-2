@@ -97,8 +97,8 @@ struct thread
                                            if thread is not waiting on a lock. */
     struct list_elem donor_elem;        /* List element used for the donor list in locks */
 
-    struct list* locklist;
-    struct list* donorlist;
+    struct list locklist;
+    struct list donorlist;
 
 
 #ifdef USERPROG

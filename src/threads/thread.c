@@ -349,7 +349,7 @@ thread_set_priority (int new_priority)
 {
   struct thread* cur = thread_current();
 
-  if (list_empty(cur->donorlist))
+  if (list_empty(&cur->donorlist))
     cur->priority = new_priority;
 
   cur->base_priority = new_priority;
@@ -484,8 +484,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->wait_lock = NULL;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
-  list_init (&t->locklist);
-  list_init (&t->donorlist);
+  //list_init (&t->locklist);
+  //list_init (&t->donorlist);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -659,14 +659,14 @@ thread_revert_priority(struct thread* t)
 {
   struct thread* head_donor;
 
-  if (list_empty(t->locklist))
+  if (list_empty(&t->locklist))
   {
     t->priority = t->base_priority;
   }
 
-  head_donor = list_entry(list_front(t->donorlist), struct thread, donor_elem);
+  head_donor = list_entry(list_front(&t->donorlist), struct thread, donor_elem);
 
-  if (head_donor->wait_lock != NULL && thread_is_in_locklist(t, head_donor->wait_lock))
+  if (head_donor->wait_lock != NULL && thread_is_in_locklist(&t, head_donor->wait_lock))
   // head_donor is still blocked by a lock held by t
   {
     t->priority = head_donor->priority;
@@ -681,13 +681,13 @@ thread_revert_priority(struct thread* t)
 void
 thread_insert_locklist(struct lock* l, struct thread* cur)
 {
-  list_push_back(cur->locklist, &l->lock_elem);
+  list_push_back(&cur->locklist, &l->lock_elem);
 }
 
 void
 thread_insert_donorlist(struct thread* donor, struct thread* donee)
 {
-  struct list* donorlist = donor->donorlist;
+  struct list* donorlist = &donor->donorlist;
   struct list_elem *current = list_begin(donorlist);
   while(current != list_end(donorlist))
   {
