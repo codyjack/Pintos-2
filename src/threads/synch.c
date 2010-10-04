@@ -189,7 +189,6 @@ lock_init (struct lock *lock)
   ASSERT (lock != NULL);
 
   lock->holder = NULL;
-  list_init(&lock->donors);
   sema_init (&lock->semaphore, 1);
 }
 
@@ -216,7 +215,7 @@ lock_acquire (struct lock *lock)
     if (lock->holder->priority < cur->priority)
     {
       //lock->holder->priority = cur->priority;
-      lock_donate_priority(cur);
+      thread_donate_priority(cur);
     }
     sema_down (&lock->semaphore);
 
@@ -278,59 +277,6 @@ lock_held_by_current_thread (const struct lock *lock)
 
   return lock->holder == thread_current ();
 }
-
-void
-lock_donate_priority(struct thread* t)
-{
-  ASSERT(is_thread(t));
-  ASSERT(NULL != t->wait_lock);
-  ASSERT(NULL != t->wait_lock->holder);
-
-  if (t->priority > t->wait_lock->holder->priority)
-  {
-    t->wait_lock->holder->priority = t->priority;
-    //add_to_donor_list(t, t->wait_lock);
-    if (t->wait_lock->holder->wait_lock != NULL)
-    {
-      lock_donate_priority(t->wait_lock->holder);
-    }
-  }
-}
-
-void
-add_to_donor_list(struct thread* t, struct lock* lock)
-{
-  struct list_elem* i;
-  struct list_elem* end = list_end(&lock->donors);
-  for (i=list_begin(&lock->donors); i != end; i = list_next(i))
-  {
-    if (t->priority > list_entry(i, struct thread, donor_elem)->priority)
-      break;
-  }
-  list_insert(i, &(t->donor_elem));
-}
-
-void
-lock_revert_priority(struct lock* lock)
-{
-  struct thread* head_donor;
-
-  if (list_empty(&lock->donors))
-  {
-    lock->holder->priority = lock->original_priority;
-    return;
-  }
-
-  head_donor = list_entry(list_pop_front(&lock->donors), struct thread, donor_elem);
-
-  if (head_donor->wait_lock != NULL && head_donor->wait_lock == lock) // head of donors is blocked by lock
-  {
-    lock->holder->priority = head_donor->priority;
-    return;
-  }
-  lock_revert_priority(lock); // head donor is not blocked, so check if the next on the list is blocked.
-}
-
 
 
 /* One semaphore in a list. */

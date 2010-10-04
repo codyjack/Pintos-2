@@ -88,13 +88,15 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int base_priority;                  /* Base priority after donations.  */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    struct lock* wait_lock;                  /* Lock this thread is waiting on. Will be NULL
+    struct lock* wait_lock;             /* Lock this thread is waiting on. Will be NULL
                                            if thread is not waiting on a lock. */
     struct list_elem donor_elem;        /* List element used for the donor list in locks */
+    struct list held_locks;             /* List of locks this thread current;y holds. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -143,6 +145,10 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-void thread_insert_sorted (struct thread *t,struct list* l);
+void thread_insert_sorted (struct thread, struct list*);
+
+void thread_donate_priority(struct thread*);
+void thread_revert_priority(struct thread*);
+void add_to_donor_list(struct thread*, struct list* l);
 
 #endif /* threads/thread.h */

@@ -610,3 +610,44 @@ thread_insert_sorted(struct thread *t, struct list* l)
   list_insert(current, &(t->elem));
 }
 
+void
+thread_donate_priority(struct thread* t)
+{
+  ASSERT(is_thread(t));
+  ASSERT(NULL != t->wait_lock);
+  ASSERT(NULL != t->wait_lock->holder);
+
+  if (t->priority > t->wait_lock->holder->priority)
+  {
+    t->wait_lock->holder->priority = t->priority;
+    //add_to_donor_list(t, &t->donors);
+    //list_remove(&t->wait_lock->holder->elem);
+    //thread_insert_sorted(t->wait_lock->holder, &t->wait_lock->semaphore.waiters);
+    if (t->wait_lock->holder->wait_lock != NULL)
+    {
+      thread_donate_priority(t->wait_lock->holder);
+    }
+  }
+}
+
+void
+thread_revert_priority(struct lock* lock)
+{
+  struct thread* head_donor;
+
+  if (list_empty(&lock->donors))
+  {
+    lock->holder->priority = lock->original_priority;
+    return;
+  }
+
+  head_donor = list_entry(list_pop_front(&lock->donors), struct thread, donor_elem);
+
+  if (head_donor->wait_lock != NULL && head_donor->wait_lock == lock) // head of donors is blocked by lock
+  {
+    lock->holder->priority = head_donor->priority;
+    return;
+  }
+  lock_revert_priority(lock); // head donor is not blocked, so check if the next on the list is blocked.
+}
+
