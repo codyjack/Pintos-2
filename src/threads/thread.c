@@ -636,20 +636,22 @@ thread_is_in_locklist(struct lock* lock, struct thread* t)
 void
 thread_donate_priority(struct thread* t)
 {
+  struct thread* holder = t->wait_lock->holder;
+
   ASSERT(is_thread(t));
   ASSERT(NULL != t->wait_lock);
   ASSERT(NULL != t->wait_lock->holder);
 
-  if (t->priority > t->wait_lock->holder->priority)
+  if (t->priority > holder->priority)
   {
-    t->wait_lock->holder->priority = t->priority;
-    thread_insert_donorlist(t, t->wait_lock->holder);
+    holder->priority = t->priority;
+    thread_insert_donorlist(holder, t);
     //list_remove(&t->wait_lock->holder->elem);
     //thread_insert_sorted(t->wait_lock->holder, &t->wait_lock->semaphore.waiters);
 
-    if (t->wait_lock->holder->wait_lock != NULL) // t's blocker is also blocked.
+    if (holder->wait_lock != NULL) // t's blocker is also blocked.
     {
-      thread_donate_priority(t->wait_lock->holder);
+      thread_donate_priority(holder);
     }
   }
 }
@@ -662,6 +664,7 @@ thread_revert_priority(struct thread* t)
   if (list_empty(&t->locklist))
   {
     t->priority = t->base_priority;
+    return;
   }
 
   head_donor = list_entry(list_front(&t->donorlist), struct thread, donor_elem);
