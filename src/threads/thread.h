@@ -96,7 +96,10 @@ struct thread
     struct lock* wait_lock;             /* Lock this thread is waiting on. Will be NULL
                                            if thread is not waiting on a lock. */
     struct list_elem donor_elem;        /* List element used for the donor list in locks */
-    struct list held_locks;             /* List of locks this thread current;y holds. */
+
+    struct list* locklist;
+    struct list* donorlist;
+
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -145,10 +148,11 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-void thread_insert_sorted (struct thread, struct list*);
+void thread_insert_sorted (struct thread* , struct list*);
 
 void thread_donate_priority(struct thread*);
 void thread_revert_priority(struct thread*);
-void add_to_donor_list(struct thread*, struct list* l);
+void thread_insert_locklist(struct lock* );
+void thread_insert_donorlist(struct thread* );
 
 #endif /* threads/thread.h */

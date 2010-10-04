@@ -217,10 +217,10 @@ lock_acquire (struct lock *lock)
       //lock->holder->priority = cur->priority;
       thread_donate_priority(cur);
     }
+    thread_set_priority (thread_current()->priority);
     sema_down (&lock->semaphore);
 
     lock->holder = cur;
-    lock->original_priority = cur->priority;
     cur->wait_lock = NULL;
   }
 }
@@ -244,8 +244,6 @@ lock_try_acquire (struct lock *lock)
   if (success)
   {
     lock->holder = cur;
-    lock->original_priority = cur->priority;
-    //cur->wait_lock = NULL;
   }
   return success;
 }
@@ -261,8 +259,8 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  lock_revert_priority(lock);
-  //lock->holder->priority = lock->original_priority;
+  //thread_revert_priority(lock->holder);
+  lock->holder->priority = lock->holder->base_priority;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
