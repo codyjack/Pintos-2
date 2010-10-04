@@ -666,7 +666,7 @@ thread_revert_priority(struct thread* t)
 
   head_donor = list_entry(list_front(&t->donorlist), struct thread, donor_elem);
 
-  if (head_donor->wait_lock != NULL && thread_is_in_locklist(&t, head_donor->wait_lock))
+  if (head_donor->wait_lock != NULL && thread_is_in_locklist(head_donor->wait_lock,t))
   // head_donor is still blocked by a lock held by t
   {
     t->priority = head_donor->priority;
