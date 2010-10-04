@@ -19,37 +19,6 @@ add_new_sleep_thread(sleep_list** list, int64_t wake_up_time)
   new_list_element->next = NULL;
   new_list_element->scheduled_time = wake_up_time;
 
-/*  if (*list == NULL)
-  {
-    *list = new_list_element;
-  }
-  else if (NULL == (*list)->next)
-  {
-    if ((*list)->scheduled_time > new_list_element->scheduled_time) 
-    {
-      new_list_element->next = *list;
-      *list = new_list_element;
-    }
-    else
-    {
-      (*list)->next = new_list_element;
-    }
-  }
-  else
-  {
-    current = *list;
-    //printf("outside add loop\n");
-    while ((current->next != NULL) && (current->next->scheduled_time > new_list_element->scheduled_time))
-    {
-    //  printf("inside add loop\n");
-      current = current->next;
-    }
-    temp = current->next;
-    current->next = new_list_element;
-    new_list_element->next = temp;
-  } */
-
-/*Richard this is what was changed John's logic take a look  */
   if (*list == NULL) {
     *list = new_list_element;
   }
