@@ -643,24 +643,24 @@ thread_revert_priority(struct thread* t)
 }
 
 void
-thread_insert_locklist(struct lock* l)
+thread_insert_locklist(struct lock* l, struct thread* cur)
 {
-  list_push_back(thread_current()->locklist, &l->lock_elem);
+  list_push_back(cur->locklist, &l->lock_elem);
 }
 
 void
-thread_insert_donorlist(struct thread* t)
+thread_insert_donorlist(struct thread* donor, struct thread* donee)
 {
-  struct list* donorlist = thread_current()->donorlist;
+  struct list* donorlist = donor->donorlist;
   struct list_elem *current = list_begin(donorlist);
   while(current != list_end(donorlist))
   {
-    if(t->priority > list_entry(current, struct thread, donor_elem)->priority)
+    if(donee->priority > list_entry(current, struct thread, donor_elem)->priority)
     {
       break;
     }
     current = list_next(current);
   }
-  list_insert(current, &t->donor_elem);
+  list_insert(current, &donee->donor_elem);
 }
 
