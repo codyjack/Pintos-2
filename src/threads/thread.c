@@ -550,7 +550,7 @@ schedule_tail (struct thread *prev)
 #endif
 
   /* If the thread we switched from is dying, destroy its struct
-     thread.  This must happen late so that thread_exit() doesn't
+     thread.  This must haprpen late so that thread_exit() doesn't
      pull out the rug under itself.  (We don't free
      initial_thread because its memory was not obtained via
      palloc().) */
@@ -645,7 +645,7 @@ thread_donate_priority(struct thread* t)
   if (t->priority > holder->priority)
   {
     holder->priority = t->priority;
-    thread_insert_donorlist(holder, t);
+    thread_insert_donorlist(holder,t);
     //list_remove(&t->wait_lock->holder->elem);
     //thread_insert_sorted(t->wait_lock->holder, &t->wait_lock->semaphore.waiters);
 

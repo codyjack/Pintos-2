@@ -217,6 +217,10 @@ lock_acquire (struct lock *lock)
       //lock->holder->priority = cur->priority;
       thread_donate_priority(cur);
     }
+    else
+    {
+      lock->holder->priority = cur->priority;
+    }
     
     sema_down (&lock->semaphore);
 
@@ -346,9 +350,10 @@ cond_wait (struct condition *cond, struct lock *lock)
   sema_init (&waiter.semaphore, 0);
   waiter.priority = thread_current()->priority;
   list_insert_ordered(&cond->waiters, &waiter.elem, cond_insert_priority, NULL);
-  
+
   lock_release (lock);
   sema_down (&waiter.semaphore);
+  lock->holder->priority = waiter.priority;
   lock_acquire (lock);
 }
 
