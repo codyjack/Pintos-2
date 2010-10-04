@@ -348,8 +348,12 @@ void
 thread_set_priority (int new_priority) 
 {
   struct thread* cur = thread_current();
-  cur->priority = new_priority;
+
+  if (list_empty(cur->donorlist))
+    cur->priority = new_priority;
+
   cur->base_priority = new_priority;
+
   if ((!list_empty(&ready_list)) && (cur->priority < list_entry(list_front (&ready_list), struct thread, elem)->priority))
     thread_yield();
 }
@@ -476,6 +480,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->thread_nice = 0;
   t->priority = priority;
+  t->base_priority = priority;
+  t->wait_lock = NULL;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
 }
@@ -624,6 +630,7 @@ thread_donate_priority(struct thread* t)
     thread_insert_donorlist(t, t->wait_lock->holder);
     //list_remove(&t->wait_lock->holder->elem);
     //thread_insert_sorted(t->wait_lock->holder, &t->wait_lock->semaphore.waiters);
+
     if (t->wait_lock->holder->wait_lock != NULL) // t's blocker is also blocked.
     {
       thread_donate_priority(t->wait_lock->holder);
@@ -634,11 +641,24 @@ thread_donate_priority(struct thread* t)
 void
 thread_revert_priority(struct thread* t)
 {
-  //struct thread* head_donor;
+  struct thread* head_donor;
 
   if (list_empty(t->locklist))
   {
+    t->priority = t->base_priority;
+  }
 
+  head_donor = list_entry(list_front(t->donorlist), struct thread, donor_elem);
+
+  if (head_donor->wait_lock != NULL && is_in_locklist(t, head_donor->wait_lock))
+  // head_donor is still blocked by a lock held by t
+  {
+    t->priority = head_donor->priority;
+  }
+  else // head_donor is no longer a donor of t
+  {
+    list_remove(&head_donor->donor_elem);
+    thread_revert_priority(t);
   }
 }
 
