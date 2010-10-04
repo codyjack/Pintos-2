@@ -617,6 +617,20 @@ thread_insert_sorted(struct thread *t, struct list* l)
   list_insert(current, &(t->elem));
 }
 
+bool
+thread_is_in_locklist(struct lock* lock, struct thread* t)
+{
+  struct list_elem* i;
+  for(i = list_begin(&t->locklist);i != list_end(&t->locklist);i = list_next(i))
+  {
+    if(i == &lock->lock_elem)
+    {
+       return true;
+    }
+  }
+  return false;
+}
+
 void
 thread_donate_priority(struct thread* t)
 {
@@ -650,7 +664,7 @@ thread_revert_priority(struct thread* t)
 
   head_donor = list_entry(list_front(t->donorlist), struct thread, donor_elem);
 
-  if (head_donor->wait_lock != NULL && is_in_locklist(t, head_donor->wait_lock))
+  if (head_donor->wait_lock != NULL && thread_is_in_locklist(t, head_donor->wait_lock))
   // head_donor is still blocked by a lock held by t
   {
     t->priority = head_donor->priority;

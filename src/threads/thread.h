@@ -155,5 +155,6 @@ void thread_revert_priority(struct thread*);
 
 void thread_insert_locklist(struct lock*, struct thread* );
 void thread_insert_donorlist(struct thread*, struct thread* );
+bool thread_is_in_locklist(struct lock*, struct thread*);
 
 #endif /* threads/thread.h */
