@@ -349,6 +349,7 @@ thread_set_priority (int new_priority)
 {
   struct thread* cur = thread_current();
   cur->priority = new_priority;
+  cur->base_priority = new_priority;
   if ((!list_empty(&ready_list)) && (cur->priority < list_entry(list_front (&ready_list), struct thread, elem)->priority))
     thread_yield();
 }
@@ -620,10 +621,10 @@ thread_donate_priority(struct thread* t)
   if (t->priority > t->wait_lock->holder->priority)
   {
     t->wait_lock->holder->priority = t->priority;
-    //add_to_donor_list(t, &t->donors);
+    thread_insert_donorlist(t, t->wait_lock->holder);
     //list_remove(&t->wait_lock->holder->elem);
     //thread_insert_sorted(t->wait_lock->holder, &t->wait_lock->semaphore.waiters);
-    if (t->wait_lock->holder->wait_lock != NULL)
+    if (t->wait_lock->holder->wait_lock != NULL) // t's blocker is also blocked.
     {
       thread_donate_priority(t->wait_lock->holder);
     }
