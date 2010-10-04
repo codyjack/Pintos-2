@@ -247,8 +247,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  //list_push_back (&ready_list, &t->elem);
   thread_insert_sorted(t,&ready_list);
+  t->current_list = &ready_list;
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -319,8 +319,10 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
+  {
     thread_insert_sorted(cur,&ready_list);
-    //list_push_back (&ready_list, &cur->elem);
+    cur->current_list = &ready_list;
+  }
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -486,6 +488,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_push_back (&all_list, &t->allelem);
   list_init (&t->locklist);
   list_init (&t->donorlist);
+  t->current_list = NULL;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -646,8 +649,12 @@ thread_donate_priority(struct thread* t)
   {
     holder->priority = t->priority;
     thread_insert_donorlist(holder, t);
-    //list_remove(&t->wait_lock->holder->elem);
-    //thread_insert_sorted(t->wait_lock->holder, &t->wait_lock->semaphore.waiters);
+
+    if (holder->status == THREAD_BLOCKED || holder->status == THREAD_READY)
+    {
+      list_remove(&holder->elem);
+      thread_insert_sorted(holder, holder->current_list);
+    }
 
     if (holder->wait_lock != NULL) // t's blocker is also blocked.
     {
