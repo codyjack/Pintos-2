@@ -26,6 +26,7 @@ struct lock
                                    reverted to after priority donation. */
     struct list donors;         /* List of threads that have donated priority.
                                    reverted to after priority donation  */
+    struct list_elem lock_elem;
   };
 
 void lock_init (struct lock *);

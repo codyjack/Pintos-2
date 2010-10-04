@@ -610,3 +610,23 @@ thread_insert_sorted(struct thread *t, struct list* l)
   list_insert(current, &(t->elem));
 }
 
+void
+thread_insert_locklist(struct lock* l)
+{
+  list_push_back(&locklist, l->lock_elem);
+}
+
+void
+thread_insert_donorlist(struct thread* t)
+{
+  struct list_elem *current = list_begin(&donorlist);
+  while(current != list_end(&donorlist))
+  {
+    if(t->priority > list_entry(current, struct thread, donor_elem)->priority)
+    {
+      break;
+    }
+    current = list_next(current);
+  }
+  list_insert(current, &t->donor_elem);
+}
