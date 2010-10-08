@@ -288,7 +288,7 @@ struct semaphore_elem
   {
     struct list_elem elem;              /* List element. */
     struct semaphore semaphore;         /* This semaphore. */
-    int priority;
+    int priority;                       /* Priority for the semaphore. This is s                                          et from the current thread priority */
   };
 
 /* Initializes condition variable COND.  A condition variable
@@ -302,6 +302,8 @@ cond_init (struct condition *cond)
   list_init (&cond->waiters);
 }
 
+
+/* This is used to sort the priority of the semaphore_elem */
 static bool
 cond_insert_priority(const struct list_elem *prev, const struct list_elem *next, void *aux)
 {
