@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/vaddr.h"
 #include "devices/serial.h"
+#include "devices/shutdown.h"
 
 /* Halts the OS, printing the source file name, line number, and
    function name, plus a user-specific message. */
@@ -45,8 +46,7 @@ debug_panic (const char *file, int line, const char *function,
     }
 
   serial_flush ();
-  if (power_off_when_done)
-    power_off ();
+  shutdown ();
   for (;;);
 }
 

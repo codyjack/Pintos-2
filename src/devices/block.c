@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include "devices/ide.h"
 #include "threads/malloc.h"
-#include "threads/synch.h"
 
 /* A block device. */
 struct block
@@ -18,7 +17,6 @@ struct block
     const struct block_operations *ops;  /* Driver operations. */
     void *aux;                          /* Extra data owned by driver. */
 
-    struct lock lock;                   /* Protects read_cnt and write_cnt. */
     unsigned long long read_cnt;        /* Number of sectors read. */
     unsigned long long write_cnt;       /* Number of sectors written. */
   };
@@ -124,9 +122,7 @@ block_read (struct block *block, block_sector_t sector, void *buffer)
 {
   check_sector (block, sector);
   block->ops->read (block->aux, sector, buffer);
-  lock_acquire (&block->lock);
   block->read_cnt++;
-  lock_release (&block->lock);
 }
 
 /* Write sector SECTOR to BLOCK from BUFFER, which must contain
@@ -140,9 +136,7 @@ block_write (struct block *block, block_sector_t sector, const void *buffer)
   check_sector (block, sector);
   ASSERT (block->type != BLOCK_FOREIGN);
   block->ops->write (block->aux, sector, buffer);
-  lock_acquire (&block->lock);
   block->write_cnt++;
-  lock_release (&block->lock);
 }
 
 /* Returns the number of sectors in BLOCK. */
@@ -172,16 +166,14 @@ block_print_stats (void)
 {
   int i;
 
-  for (i = 0; i < BLOCK_CNT; i++)
+  for (i = 0; i < BLOCK_ROLE_CNT; i++)
     {
       struct block *block = block_by_role[i];
       if (block != NULL)
         {
-          lock_acquire (&block->lock);
           printf ("%s (%s): %llu reads, %llu writes\n",
                   block->name, block_type_name (block->type),
                   block->read_cnt, block->write_cnt);
-          lock_release (&block->lock);
         }
     }
 }
@@ -208,7 +200,6 @@ block_register (const char *name, enum block_type type,
   block->aux = aux;
   block->read_cnt = 0;
   block->write_cnt = 0;
-  lock_init (&block->lock);
 
   printf ("%s: %'"PRDSNu" sectors (", block->name, block->size);
   print_human_readable_size ((uint64_t) block->size * BLOCK_SECTOR_SIZE);

@@ -24,7 +24,8 @@ test_alarm_multiple (void)
   test_sleep (5, 7);
 }
 
-test_alarm_mini (void)
+void
+test_alarm_many (void) 
 {
   test_sleep (5, 14);
 }

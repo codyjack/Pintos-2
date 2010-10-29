@@ -213,9 +213,9 @@ putc:	pusha
 2:	int $0x14			# Destroys AH.
 	test $0x80, %ah			# Output timed out?
 	jz 3f
-	movw $0x9090, 2b			
+	movw $0x9090, 2b		# Turn "int $0x14" above into NOPs.
 
-3:	
+3:
 	cmp $'\r', %al
 	jne popa_ret
 	mov $'\n', %al
