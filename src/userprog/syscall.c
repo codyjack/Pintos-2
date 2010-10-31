@@ -190,8 +190,15 @@ sys_exit (int exit_code)
 static int
 sys_exec (const char *ufile) 
 {
-/* Add code */
-  thread_exit ();
+  
+  int ret;
+  const char *kfile = copy_in_string(ufile);
+
+  lock_acquire(&fs_lock);
+  ret = process_execute(kfile);
+  lock_release(&fs_lock);
+
+  return ret;
 }
  
 /* Wait system call. */
