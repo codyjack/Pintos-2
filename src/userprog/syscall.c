@@ -190,17 +190,21 @@ sys_exit (int exit_code)
 static int
 sys_exec (const char *ufile) 
 {
-  char* kfile = copy_in_string(ufile);
-  process_execute(kfile);
-  thread_exit ();
+  int ret;
+  const char *kfile = copy_in_string(ufile);
+
+  lock_acquire(&fs_lock);
+  ret = process_execute(kfile);
+  lock_release(&fs_lock);
+
+  return ret;
 }
  
 /* Wait system call. */
 static int
 sys_wait (tid_t child) 
 {
-/* Add code */
-  thread_exit ();
+   process_wait(child);
 }
  
 /* Create system call. */
@@ -260,7 +264,17 @@ static struct file_descriptor *
 lookup_fd (int handle)
 {
 /* Add code to lookup file descriptor in the current thread's fds */
-  thread_exit ();
+  struct list_elem *e;
+  struct list *s = &(thread_current()->fds);
+  for(e = list_begin(s); e != list_end(s); e = list_next(e))
+  {
+    struct file_descriptor *fd = list_entry(e, struct file_descriptor,elem);
+    if(fd->handle  == handle)
+    {
+      return fd;
+    }
+  }
+  return NULL;
 }
  
 /* Filesize system call. */
@@ -361,7 +375,7 @@ sys_close (int handle)
  
 /* On thread exit, close all open files. */
 void
-syscall_exit (void) 
+syscall_exit (void)
 {
 /* Add code */
   return;

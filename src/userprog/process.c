@@ -139,6 +139,16 @@ release_child (struct wait_status *cs)
 int
 process_wait (tid_t child_tid) 
 {
+  struct thread *cur = thread_current();
+  struct list_elem *e;
+  for(e = list_begin(&cur->children); e != list_end(&cur->children); e = list_next(e))
+  {
+    struct thread *child = list_entry(e, struct thread, elem);
+    if(child->tid == child_tid)
+    {
+       return child->wait_status->exit_code;
+    }
+  }
   return -1;
 }
 
@@ -203,7 +213,6 @@ process_activate (void)
      interrupts. */
   tss_update ();
 }
-
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification, [ELF1], more-or-less verbatim.  */
 
@@ -397,7 +406,6 @@ load (const char *cmd_line, void (**eip) (void), void **esp)
   /* We arrive here whether the load is successful or not. */
   return success;
 }
-
 /* load() helpers. */
 
 static bool install_page (void *upage, void *kpage, bool writable);
