@@ -190,7 +190,8 @@ sys_exit (int exit_code)
 static int
 sys_exec (const char *ufile) 
 {
-/* Add code */
+  char* kfile = copy_in_string(ufile);
+  process_execute(kfile);
   thread_exit ();
 }
  

@@ -509,10 +509,16 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Reverse the order of the ARGC pointers to char in ARGV. */
 static void
 reverse (int argc, char **argv) 
-{
-   /* Need to add code */
-
-   return;
+{  
+  int i;
+  char* swp;
+  for (i = 0; i < argc/2; i++)
+  {
+    swp = argv[i];
+    argv[i] = argv[argc-i-1];
+    argv[argc-i-1] = swp;
+  }
+  return;
 }
 
 /* Pushes the SIZE bytes in BUF onto the stack in KPAGE, whose
