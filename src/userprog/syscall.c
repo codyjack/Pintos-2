@@ -190,7 +190,6 @@ sys_exit (int exit_code)
 static int
 sys_exec (const char *ufile) 
 {
-  
   int ret;
   const char *kfile = copy_in_string(ufile);
 
