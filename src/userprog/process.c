@@ -143,10 +143,11 @@ process_wait (tid_t child_tid)
   struct list_elem *e;
   for(e = list_begin(&cur->children); e != list_end(&cur->children); e = list_next(e))
   {
-    struct thread *child = list_entry(e, struct thread, elem);
+    struct wait_status *child = list_entry(e, struct wait_status, elem);
     if(child->tid == child_tid)
     {
-       return child->wait_status->exit_code;
+       sema_down(&child->dead);
+       return child->exit_code;
     }
   }
   return -1;
@@ -168,6 +169,7 @@ process_exit (void)
     {
       struct wait_status *cs = cur->wait_status;
       printf ("%s: exit(%d)\n", cur->name, cs->exit_code);
+      sema_up(&cs->dead);
       release_child (cs);
     }
 
