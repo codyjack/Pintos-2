@@ -20,7 +20,7 @@ static int sys_exit (int status);
 static int sys_exec (const char *ufile);
 static int sys_wait (tid_t);
 static int sys_create (const char *ufile, unsigned initial_size);
-static int sys_remove (const char *ufile);
+static bool sys_remove (const char *ufile);
 static int sys_open (const char *ufile);
 static int sys_filesize (int handle);
 static int sys_read (int handle, void *udst_, unsigned size);
@@ -211,14 +211,33 @@ sys_wait (tid_t child)
 static int
 sys_create (const char *ufile, unsigned initial_size) 
 {
-  return 0;
+  if(verify_user(ufile))
+  {
+    const char *kfile = copy_in_string(ufile);
+    
+    return filesys_create(kfile, initial_size);
+  }
+  else
+  {
+    thread_exit();
+  }
 }
  
 /* Remove system call. */
-static int
+static bool
 sys_remove (const char *ufile) 
 {
 /* Add code */
+  if(verify_user(ufile))
+  {
+    const char *kfile = copy_in_string(ufile);
+
+    return filesys_remove(kfile);
+  }
+  else
+  {
+    return false;
+  }
 }
  
 /* A file descriptor, for binding a file handle to a file. */
@@ -274,7 +293,7 @@ lookup_fd (int handle)
       return fd;
     }
   }
-  return NULL;
+  thread_exit();
 }
  
 /* Filesize system call. */
@@ -282,7 +301,16 @@ static int
 sys_filesize (int handle) 
 {
 /* Add code */
-  thread_exit ();
+  struct file_descriptor *fd;
+  fd = lookup_fd(handle);
+  if(verify_user(fd->file))
+  {
+    return file_length(fd->file);
+  }
+  else
+  {
+    thread_exit ();
+  }
 }
  
 /* Read system call. */
@@ -354,6 +382,9 @@ static int
 sys_seek (int handle, unsigned position) 
 {
 /* Add code */
+  struct file_descriptor *fd;
+  fd = lookup_fd(handle);
+  file_seek(fd->file, position);
   thread_exit ();
 }
  
@@ -369,7 +400,9 @@ sys_tell (int handle)
 static int
 sys_close (int handle) 
 {
-/* Add code */
+  struct thread *cur = thread_current();
+  struct list_elem *e;
+
   thread_exit ();
 }
  
