@@ -191,20 +191,26 @@ static int
 sys_exec (const char *ufile) 
 {
   int ret;
-  const char *kfile = copy_in_string(ufile);
+  if(verify_user(ufile))
+  {
+    const char *kfile = copy_in_string(ufile);
 
-  lock_acquire(&fs_lock);
-  ret = process_execute(kfile);
-  lock_release(&fs_lock);
-
-  return ret;
+    lock_acquire(&fs_lock);
+    ret = process_execute(kfile);
+    lock_release(&fs_lock);
+    return ret;
+  }
+  else
+  {
+    return false;
+  }
 }
  
 /* Wait system call. */
 static int
 sys_wait (tid_t child) 
 {
-   process_wait(child);
+   return process_wait(child);
 }
  
 /* Create system call. */
@@ -252,10 +258,11 @@ struct file_descriptor
 static int
 sys_open (const char *ufile) 
 {
+  if(verify_user(ufile))
+  {
   char *kfile = copy_in_string (ufile);
   struct file_descriptor *fd;
   int handle = -1;
- 
   fd = malloc (sizeof *fd);
   if (fd != NULL)
     {
@@ -271,9 +278,14 @@ sys_open (const char *ufile)
         free (fd);
       lock_release (&fs_lock);
     }
-  
+
   palloc_free_page (kfile);
   return handle;
+  }
+  else
+  {
+  thread_exit();
+  }
 }
  
 /* Returns the file descriptor associated with the given handle.
@@ -385,7 +397,7 @@ sys_seek (int handle, unsigned position)
   struct file_descriptor *fd;
   fd = lookup_fd(handle);
   file_seek(fd->file, position);
-  //thread_exit ();
+  thread_exit ();
 }
  
 /* Tell system call. */
