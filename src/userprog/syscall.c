@@ -385,7 +385,7 @@ sys_seek (int handle, unsigned position)
   struct file_descriptor *fd;
   fd = lookup_fd(handle);
   file_seek(fd->file, position);
-  thread_exit ();
+  //thread_exit ();
 }
  
 /* Tell system call. */
@@ -393,7 +393,10 @@ static int
 sys_tell (int handle) 
 {
 /* Add code */
-  thread_exit ();
+  struct file_descriptor *fd;
+  fd = lookup_fd(handle);
+  return file_tell(fd->file);
+  //thread_exit ();
 }
  
 /* Close system call. */
@@ -402,8 +405,20 @@ sys_close (int handle)
 {
   struct thread *cur = thread_current();
   struct list_elem *e;
-
-  thread_exit ();
+  struct list *s = &(cur->fds);
+  struct file_descriptor *fd;
+  
+  for(e = list_begin(s); e != list_end(s); e = list_next(e))
+  {
+     fd = list_entry(e, struct file_descriptor, elem);
+     if(fd->handle == handle)
+     {
+        file_close(fd->file);
+        list_remove(e);
+        break;
+     }
+  }
+  //thread_exit ();
 }
  
 /* On thread exit, close all open files. */
@@ -411,5 +426,14 @@ void
 syscall_exit (void)
 {
 /* Add code */
+  struct thread *cur = thread_current();
+  struct list *s = &(cur->fds);
+  struct list_elem *e;
+  struct file_descriptor *fd;
+  for(e = list_begin(s);e != list_end(s); e = list_next(e))
+  {
+    fd = list_entry(e, struct file_descriptor, elem);
+    file_close(fd->file);
+  }
   return;
 }
