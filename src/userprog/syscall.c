@@ -317,9 +317,10 @@ lookup_fd (int handle)
 /* Add code to lookup file descriptor in the current thread's fds */
   struct list_elem *e;
   struct list *s = &(thread_current()->fds);
+  struct file_descriptor *fd;
   for(e = list_begin(s); e != list_end(s); e = list_next(e))
   {
-    struct file_descriptor *fd = list_entry(e, struct file_descriptor,elem);
+    fd = list_entry(e, struct file_descriptor,elem);
     if(fd->handle  == handle)
     {
       return fd;
@@ -335,14 +336,14 @@ sys_filesize (int handle)
 /* Add code */
   struct file_descriptor *fd;
   fd = lookup_fd(handle);
-  if(verify_user(fd->file))
-  {
+ // if(verify_user(fd->file))
+ // {
     return file_length(fd->file);
-  }
-  else
-  {
-    thread_exit ();
-  }
+ // }
+ // else
+ // {
+ //   thread_exit ();
+ // }
 }
  
 /* Read system call. */
@@ -431,8 +432,7 @@ sys_write (int handle, void *usrc_, unsigned size)
       usrc += retval;
       size -= retval;
     }
-  lock_release (&fs_lock);
- 
+  lock_release (&fs_lock); 
   return bytes_written;
 }
  
