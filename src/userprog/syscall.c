@@ -77,6 +77,13 @@ syscall_handler (struct intr_frame *f)
   unsigned call_nr;
   int args[3];
 
+  /* Check if ESP is pointing to a location in the current page. */
+  if (f->esp == 64*1024*1024)
+  {
+    f->eax = -1;
+    thread_exit();
+  }
+
   /* Get the system call. */
   copy_in (&call_nr, f->esp, sizeof call_nr);
   if (call_nr >= sizeof syscall_table / sizeof *syscall_table)
@@ -330,7 +337,34 @@ static int
 sys_read (int handle, void *udst_, unsigned size) 
 {
 /* Add code */
-  thread_exit ();
+  char* udst = (char*) udst_;
+  unsigned bytes_read = 0;
+  struct file_descriptor* fd = NULL;
+
+  if (handle != STDIN_FILENO)
+    fd = lookup_fd(handle);
+
+  lock_acquire(&fs_lock);
+  if (!verify_user(udst_))
+  {
+    lock_release(&fs_lock);
+    thread_exit();
+  }
+  if (handle == STDIN_FILENO)
+  {
+    for(bytes_read = 0; bytes_read < size; bytes_read++)
+    {
+      *udst = (char) input_getc();
+      udst++;
+    }
+  }
+  else
+  {
+    bytes_read = file_read(fd->file, udst_, size);
+  }
+
+  lock_release(&fs_lock);
+  return bytes_read;
 }
  
 /* Write system call. */
