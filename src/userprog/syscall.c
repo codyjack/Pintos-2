@@ -116,8 +116,11 @@ static inline bool
 get_user (uint8_t *dst, const uint8_t *usrc)
 {
   int eax;
+  if(dst >= (uint8_t *)PHYS_BASE)
+  {
   asm ("movl $1f, %%eax; movb %2, %%al; movb %%al, %0; 1:"
        : "=m" (*dst), "=&a" (eax) : "m" (*usrc));
+  }
   return eax != 0;
 }
  
@@ -141,6 +144,10 @@ copy_in (void *dst_, const void *usrc_, size_t size)
 {
   uint8_t *dst = dst_;
   const uint8_t *usrc = usrc_;
+  if(!verify_user(usrc))
+  {
+    thread_exit();
+  }
  
   for (; size > 0; size--, dst++, usrc++) 
     if (usrc >= (uint8_t *) PHYS_BASE || !get_user (dst, usrc)) 
@@ -205,6 +212,7 @@ sys_exec (const char *ufile)
     lock_acquire(&fs_lock);
     ret = process_execute(kfile);
     lock_release(&fs_lock);
+    palloc_free_page(kfile);
     return ret;
   }
   else
@@ -224,11 +232,15 @@ sys_wait (tid_t child)
 static int
 sys_create (const char *ufile, unsigned initial_size) 
 {
+  bool ret = false;
   if(verify_user(ufile))
   {
     const char *kfile = copy_in_string(ufile);
-    
-    return filesys_create(kfile, initial_size);
+    lock_acquire(&fs_lock);
+    ret = filesys_create(kfile, initial_size);
+    lock_release(&fs_lock);
+    palloc_free_page(kfile);
+    return ret;
   }
   else
   {
@@ -241,16 +253,17 @@ static bool
 sys_remove (const char *ufile) 
 {
 /* Add code */
+  bool ret = false;
   if(verify_user(ufile))
   {
     const char *kfile = copy_in_string(ufile);
+    lock_acquire(&fs_lock);
+    ret = filesys_remove(kfile);
+    lock_release(&fs_lock);
 
-    return filesys_remove(kfile);
+    palloc_free_page(kfile);
   }
-  else
-  {
-    return false;
-  }
+    return ret;
 }
  
 /* A file descriptor, for binding a file handle to a file. */
@@ -430,8 +443,10 @@ sys_seek (int handle, unsigned position)
 /* Add code */
   struct file_descriptor *fd;
   fd = lookup_fd(handle);
-  file_seek(fd->file, position);
-  thread_exit ();
+  if((off_t) position >= 0)
+    file_seek(fd->file, position);
+  //thread_exit ();
+  return 0;
 }
  
 /* Tell system call. */
@@ -449,22 +464,13 @@ sys_tell (int handle)
 static int
 sys_close (int handle) 
 {
-  struct thread *cur = thread_current();
-  struct list_elem *e;
-  struct list *s = &(cur->fds);
-  struct file_descriptor *fd;
-  
-  for(e = list_begin(s); e != list_end(s); e = list_next(e))
-  {
-     fd = list_entry(e, struct file_descriptor, elem);
-     if(fd->handle == handle)
-     {
-        file_close(fd->file);
-        list_remove(e);
-        break;
-     }
-  }
-  //thread_exit ();
+  struct file_descriptor *fd = lookup_fd(handle);
+  lock_acquire(&fs_lock);
+  file_close(fd->file);
+  lock_release(&fs_lock);
+  list_remove(&fd->elem);
+  free(fd);
+  return 0;
 }
  
 /* On thread exit, close all open files. */

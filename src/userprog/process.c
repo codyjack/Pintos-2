@@ -141,13 +141,17 @@ process_wait (tid_t child_tid)
 {
   struct thread *cur = thread_current();
   struct list_elem *e;
+  int exit;
   for(e = list_begin(&cur->children); e != list_end(&cur->children); e = list_next(e))
   {
     struct wait_status *child = list_entry(e, struct wait_status, elem);
     if(child->tid == child_tid)
     {
        sema_down(&child->dead);
-       return child->exit_code;
+       exit = child->exit_code;
+       list_remove(e);
+       release_child(child);
+       return exit;
     }
   }
   return -1;
