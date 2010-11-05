@@ -140,16 +140,16 @@ int
 process_wait (tid_t child_tid) 
 {
   struct thread *cur = thread_current();
-  struct list_elem *e;
+  struct list_elem *e, *next;
   int exit;
-  for(e = list_begin(&cur->children); e != list_end(&cur->children); e = list_next(e))
+  for(e = list_begin(&cur->children); e != list_end(&cur->children); e = next)
   {
     struct wait_status *child = list_entry(e, struct wait_status, elem);
     if(child->tid == child_tid)
     {
        sema_down(&child->dead);
        exit = child->exit_code;
-       list_remove(e);
+       next = list_remove(e);
        release_child(child);
        return exit;
     }

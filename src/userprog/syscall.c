@@ -31,7 +31,8 @@ static int sys_close (int handle);
  
 static void syscall_handler (struct intr_frame *);
 static void copy_in (void *, const void *, size_t);
- 
+static bool verify_user(const void*);
+
 /* Serializes file system operations. */
 static struct lock fs_lock;
  
@@ -148,7 +149,8 @@ copy_in (void *dst_, const void *usrc_, size_t size)
   {
     thread_exit();
   }
- 
+
+
   for (; size > 0; size--, dst++, usrc++) 
     if (usrc >= (uint8_t *) PHYS_BASE || !get_user (dst, usrc)) 
       thread_exit ();
@@ -480,12 +482,18 @@ syscall_exit (void)
 /* Add code */
   struct thread *cur = thread_current();
   struct list *s = &(cur->fds);
-  struct list_elem *e;
-  struct file_descriptor *fd;
-  for(e = list_begin(s);e != list_end(s); e = list_next(e))
+  struct list_elem *e, *next;
+
+  lock_acquire(&fs_lock);
+
+  for(e = list_begin(s);e != list_end(s); e = next)
   {
-    fd = list_entry(e, struct file_descriptor, elem);
+    struct file_descriptor* fd = list_entry(e, struct file_descriptor, elem);
     file_close(fd->file);
+    next = list_remove(e);
+    free(fd);
   }
+
+  lock_release(&fs_lock);
   return;
 }
