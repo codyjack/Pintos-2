@@ -2,6 +2,7 @@
 #define THREADS_THREAD_H
 
 #include <debug.h>
+#include <hash.h>
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
@@ -92,21 +93,28 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Owned by process.c. */
+    int exit_code;                      /* Exit code. */
     struct wait_status *wait_status;    /* This process's completion status. */
     struct list children;               /* Completion status of children. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-#ifdef USERPROG
+    /* Alarm clock. */
+    int64_t wakeup_time;                /* Time to wake this thread up. */
+    struct list_elem timer_elem;        /* Element in timer_wait_list. */
+    struct semaphore timer_sema;        /* Semaphore. */
+
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-#endif
-    struct file *bin_file;              /* Executable. */
+    struct hash *pages;                 /* Page table. */
+    struct file *bin_file;              /* The binary executable. */
 
     /* Owned by syscall.c. */
     struct list fds;                    /* List of file descriptors. */
+    struct list mappings;               /* Memory-mapped files. */
     int next_handle;                    /* Next handle value. */
+    void *user_esp;                     /* User's stack pointer. */
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
