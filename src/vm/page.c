@@ -40,21 +40,25 @@ static struct page *
 page_for_addr (const void *address) 
 {
   if (address < PHYS_BASE) 
+  {
+    struct page p;
+    struct hash_elem *e;
+    const void* user_esp = thread_current()->user_esp;
+
+    /* Find existing page. */
+    p.addr = (void *) pg_round_down (address);
+    e = hash_find (thread_current ()->pages, &p.hash_elem);
+    if (e != NULL)
+      return hash_entry (e, struct page, hash_elem);
+ 
+    /* No page.  Expand stack? */
+    /* add code */
+    if (user_esp - address < 32 && address > (PHYS_BASE - STACK_MAX))
     {
-      struct page p;
-      struct hash_elem *e;
-
-      /* Find existing page. */
-      p.addr = (void *) pg_round_down (address);
-      e = hash_find (thread_current ()->pages, &p.hash_elem);
-      if (e != NULL)
-        return hash_entry (e, struct page, hash_elem);
-
-      /* No page.  Expand stack? */
-
-/* add code */
-
+      return page_allocate(address, false);
     }
+
+  }
   return NULL;
 }
 
