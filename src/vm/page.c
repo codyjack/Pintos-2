@@ -159,14 +159,13 @@ page_out (struct page *p)
   /* add code here */
   if(dirty)
   {
-    if(p->private)
-      ok = swap_out(p);
-    else
-    {
-     successful = file_write_at(p->file,p->addr, p->file_bytes, p->file_offset);
-     if(successful == p->file_bytes)
-        ok = true;
-    }
+   // if(swap_out(p))
+   // {
+     //successful = file_write_at(p->file,p->addr, p->file_bytes, p->file_offset);
+     //if(successful == p->file_bytes)
+       // ok = true;
+       ok = swap_out(p);
+   // }
   }
   return ok;
 }
@@ -235,7 +234,7 @@ page_deallocate (void *vaddr)
     {
       struct frame *f = p->frame;
       if (p->file && !p->private) 
-        page_out (p); 
+        page_out (p);
       frame_free (f);
     }
   hash_delete (thread_current ()->pages, &p->hash_elem);
