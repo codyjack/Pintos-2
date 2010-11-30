@@ -505,6 +505,15 @@ static void
 unmap (struct mapping *m) 
 {
 /* add code here */
+int count;
+
+for(count = 0; count < m->page_cnt; count++)
+{
+  page_deallocate(m->base + (PGSIZE*count));
+}
+list_remove(&m->elem);
+file_close(m->file);
+free(m);
 }
  
 /* Mmap system call. */
@@ -561,8 +570,9 @@ static int
 sys_munmap (int mapping) 
 {
 /* add code here */
-
-  return 0;
+ struct mapping *m = lookup_mapping(mapping);
+ unmap(m);
+ return 0;
 }
  
 /* On thread exit, close all open files and unmap all mappings. */
