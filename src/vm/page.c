@@ -55,7 +55,7 @@ page_for_addr (const void *address)
     /* add code */
     if (user_esp - address < 32 && address > (PHYS_BASE - STACK_MAX))
     {
-      return page_allocate(address, false);
+      return page_allocate(pg_round_down(address), false);
     }
 
   }
