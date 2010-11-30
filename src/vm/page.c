@@ -39,7 +39,7 @@ page_exit (void)
 static struct page *
 page_for_addr (const void *address) 
 {
-  if (address < PHYS_BASE) 
+  if (address < PHYS_BASE ) 
   {
     struct page p;
     struct hash_elem *e;
@@ -53,11 +53,10 @@ page_for_addr (const void *address)
  
     /* No page.  Expand stack? */
     /* add code */
-    if (user_esp - address < 32 && address > (PHYS_BASE - STACK_MAX))
+    if((user_esp - address) < 32 && address > (PHYS_BASE - STACK_MAX))
     {
       return page_allocate(address, false);
     }
-
   }
   return NULL;
 }
@@ -140,7 +139,7 @@ page_out (struct page *p)
 {
   bool dirty;
   bool ok = false;
-
+  int successful;
   ASSERT (p->frame != NULL);
   ASSERT (lock_held_by_current_thread (&p->frame->lock));
 
@@ -149,16 +148,26 @@ page_out (struct page *p)
      dirty bit, to prevent a race with the process dirtying the
      page. */
 
-/* add code here */
+  /* add code here */
+  pagedir_clear_page(thread_current()->pagedir,p->addr);
 
   /* Has the frame been modified? */
-
-/* add code here */
+  /* add code here */
+  dirty = pagedir_is_dirty(thread_current()->pagedir, p->addr);
 
   /* Write frame contents to disk if necessary. */
-
-/* add code here */
-
+  /* add code here */
+  if(dirty)
+  {
+    if(p->private)
+      ok = swap_out(p);
+    else
+    {
+     successful = file_write_at(p->file,p->addr, p->file_bytes, p->file_offset);
+     if(successful == p->file_bytes)
+        ok = true;
+    }
+  }
   return ok;
 }
 
@@ -280,3 +289,4 @@ page_unlock (const void *addr)
   ASSERT (p != NULL);
   frame_unlock (p->frame);
 }
+
