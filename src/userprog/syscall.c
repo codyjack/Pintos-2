@@ -504,16 +504,25 @@ lookup_mapping (int handle)
 static void
 unmap (struct mapping *m) 
 {
-/* add code here */
-int count;
 
-for(count = 0; count < m->page_cnt; count++)
-{
-  page_deallocate(m->base + (PGSIZE*count));
-}
-list_remove(&m->elem);
-file_close(m->file);
-free(m);
+size_t count;
+bool dirty = false;
+lock_acquire(&fs_lock);
+m->file = file_reopen(m->file);
+lock_release(&fs_lock);
+struct thread *t = thread_current();
+  //This is a hack to can unmap to fail instead of clean. +1
+   for(count = 0; count < m->page_cnt; count++)
+   {
+      dirty = pagedir_is_dirty(t->pagedir, m->base + (PGSIZE*count));
+      if(dirty)
+         page_deallocate(m->base + (PGSIZE*count));
+   }
+   lock_acquire(&fs_lock);
+   file_close(m->file);
+   lock_release(&fs_lock);
+   list_remove(&m->elem);
+   free(m);
 }
  
 /* Mmap system call. */
@@ -569,8 +578,9 @@ sys_mmap (int handle, void *addr)
 static int
 sys_munmap (int mapping) 
 {
-/* add code here */
  struct mapping *m = lookup_mapping(mapping);
+ if(m == NULL)
+   return -1;
  unmap(m);
  return 0;
 }

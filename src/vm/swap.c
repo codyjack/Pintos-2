@@ -80,6 +80,9 @@ swap_out (struct page *p)
   block_write(swap_device, p->sector + i, p->frame->base + i * BLOCK_SECTOR_SIZE);
   }
 
+//  bitmap_mark(swap_bitmap, p->sector/PAGE_SECTORS);
+ // p->sector = (block_sector_t)-1;
+
   p->private = false;
   p->file = NULL;
   p->file_offset = 0;
