@@ -609,10 +609,10 @@ sys_munmap (int mapping)
 static int
 sys_chdir (const char *udir) 
 {
+  char* kdir = copy_in_string(udir);
   bool ok = false;
-
-  // ADD CODE HERE
-
+  ok =  filesys_chdir(kdir);
+  palloc_free_page(kdir);
   return ok;
 }
 
@@ -651,11 +651,20 @@ sys_isdir (int handle)
 static int
 sys_inumber (int handle)
 {
+  struct file_descriptor *fd;
+  struct inode *inode;
 
   // ADD AND MODIFY CODE HERE - call dir_get_inode() for directories
-
-  struct file_descriptor *fd = lookup_fd (handle);
-  struct inode *inode = file_get_inode (fd->file);
+  if(sys_isdir(handle))
+  {
+    fd = lookup_fd(handle);
+    inode = dir_get_inode(fd->dir); 
+  }
+  else
+  {
+    fd = lookup_fd (handle);
+    inode = file_get_inode (fd->file);
+  }
   return inode_get_inumber (inode);
 }
  

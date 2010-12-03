@@ -218,12 +218,14 @@ dir_remove (struct dir *dir, const char *name)
   bool success = false;
   off_t ofs;
 
+  struct dir *empty;
+
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
   /* Don't allow . or .. to be removed */
-
-  // ADD CODE HERE
+  if (strcmp(name, ".") || strcmp(name, ".."))
+    goto done;
 
   /* Find directory entry. */
   inode_lock (dir->inode);
@@ -236,6 +238,9 @@ dir_remove (struct dir *dir, const char *name)
     goto done;
 
   /* Verify that it is not an in-use or non-empty directory. */
+
+  if(e.in_use || (inode_get_type(inode) == DIR_INODE && inode_length(inode) != ) )
+     goto done;
 
   // ADD CODE HERE
 
