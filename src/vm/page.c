@@ -52,7 +52,7 @@ page_for_addr (const void *address)
       return hash_entry (e, struct page, hash_elem);
  
     /* No page.  Expand stack? */
-    /* add code */
+
     if((user_esp - address) < 32 && address > (PHYS_BASE - STACK_MAX))
     {
       return page_allocate(pg_round_down(address), false);
@@ -142,30 +142,38 @@ page_out (struct page *p)
   int successful;
   ASSERT (p->frame != NULL);
   ASSERT (lock_held_by_current_thread (&p->frame->lock));
+//  struct thread *t = thread_current();
 
   /* Mark page not present in page table, forcing accesses by the
      process to fault.  This must happen before checking the
      dirty bit, to prevent a race with the process dirtying the
      page. */
 
-  /* add code here */
-  pagedir_clear_page(thread_current()->pagedir,p->addr);
+  pagedir_clear_page(p->thread->pagedir,p->addr);
 
   /* Has the frame been modified? */
-  /* add code here */
-  dirty = pagedir_is_dirty(thread_current()->pagedir, p->addr);
+
+  dirty = pagedir_is_dirty(p->thread->pagedir, p->frame->base);
 
   /* Write frame contents to disk if necessary. */
-  /* add code here */
   if(dirty)
   {
-   // if(swap_out(p))
-   // {
-     //successful = file_write_at(p->file,p->addr, p->file_bytes, p->file_offset);
-     //if(successful == p->file_bytes)
-       // ok = true;
-       ok = swap_out(p);
-   // }
+    if(!p->private)
+    {
+      if(!p->file == NULL)
+      {
+      successful = file_write_at(p->file,p->frame->base, p->file_bytes, p->file_offset);
+      } 
+      ok = swap_out(p);
+      if(ok)
+        p->frame = NULL;
+    }
+  else
+  {
+    ok = swap_out(p);
+    if(ok)
+      p->frame = NULL;
+  }
   }
   return ok;
 }
