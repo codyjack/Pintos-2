@@ -1,5 +1,6 @@
 #include "filesys/file.h"
 #include <debug.h>
+#include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 
@@ -11,6 +12,24 @@ struct file
     bool deny_write;            /* Has file_deny_write() been called? */
   };
 
+/* Creates a file in the given SECTOR,
+   initially LENGTH bytes long. 
+   Returns inode for the file on success, null pointer on failure.
+   On failure, SECTOR is released in the free map. */
+struct inode *
+file_create (block_sector_t sector, off_t length) 
+{
+  struct inode *inode = inode_create (sector, FILE_INODE);
+  if (inode != NULL && length > 0
+      && inode_write_at (inode, "", 1, length - 1) != 1)
+    {
+      inode_remove (inode); 
+      inode_close (inode);
+      inode = NULL;
+    }
+  return inode;
+}
+
 /* Opens a file for the given INODE, of which it takes ownership,
    and returns the new file.  Returns a null pointer if an
    allocation fails or if INODE is null. */
@@ -18,7 +37,7 @@ struct file *
 file_open (struct inode *inode) 
 {
   struct file *file = calloc (1, sizeof *file);
-  if (inode != NULL && file != NULL)
+  if (inode != NULL && file != NULL && inode_get_type (inode) == FILE_INODE)
     {
       file->inode = inode;
       file->pos = 0;

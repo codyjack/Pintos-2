@@ -24,6 +24,7 @@ destroy_page (struct hash_elem *p_, void *aux UNUSED)
   free (p);
 }
 
+
 /* Destroys the current process's page table. */
 void
 page_exit (void) 
@@ -39,25 +40,22 @@ page_exit (void)
 static struct page *
 page_for_addr (const void *address) 
 {
-  if (address < PHYS_BASE ) 
-  {
-    struct page p;
-    struct hash_elem *e;
-    const void* user_esp = thread_current()->user_esp;
-
-    /* Find existing page. */
-    p.addr = (void *) pg_round_down (address);
-    e = hash_find (thread_current ()->pages, &p.hash_elem);
-    if (e != NULL)
-      return hash_entry (e, struct page, hash_elem);
- 
-    /* No page.  Expand stack? */
-
-    if((user_esp - address) < 32 && address > (PHYS_BASE - STACK_MAX))
+  if (address < PHYS_BASE) 
     {
-      return page_allocate(pg_round_down(address), false);
+      struct page p;
+      struct hash_elem *e;
+
+      /* Find existing page. */
+      p.addr = (void *) pg_round_down (address);
+      e = hash_find (thread_current ()->pages, &p.hash_elem);
+      if (e != NULL)
+        return hash_entry (e, struct page, hash_elem);
+
+      /* No page.  Expand stack? */
+      if (address >= PHYS_BASE - STACK_MAX
+          && address >= thread_current ()->user_esp - 32)
+        return page_allocate ((void *) address, false);
     }
-  }
   return NULL;
 }
 
@@ -138,43 +136,41 @@ bool
 page_out (struct page *p) 
 {
   bool dirty;
-  bool ok = false;
-  int successful;
+  bool ok;
+
   ASSERT (p->frame != NULL);
   ASSERT (lock_held_by_current_thread (&p->frame->lock));
-//  struct thread *t = thread_current();
 
   /* Mark page not present in page table, forcing accesses by the
      process to fault.  This must happen before checking the
      dirty bit, to prevent a race with the process dirtying the
      page. */
-
-  pagedir_clear_page(p->thread->pagedir,p->addr);
+  pagedir_clear_page (p->thread->pagedir, p->addr);
 
   /* Has the frame been modified? */
-
-  dirty = pagedir_is_dirty(p->thread->pagedir, p->frame->base);
+  dirty = pagedir_is_dirty (p->thread->pagedir, p->addr);
 
   /* Write frame contents to disk if necessary. */
-  if(dirty)
-  {
-    if(!p->private)
+  if (p->file != NULL) 
     {
-      if(!p->file == NULL)
-      {
-      successful = file_write_at(p->file,p->frame->base, p->file_bytes, p->file_offset);
-      } 
-      ok = swap_out(p);
-      if(ok)
-        p->frame = NULL;
+      if (dirty) 
+        {
+          if (p->private)
+            ok = swap_out (p);
+          else 
+            ok = file_write_at (p->file, p->frame->base, p->file_bytes,
+                                p->file_offset) == p->file_bytes;
+        }
+      else
+        ok = true;
     }
   else
-  {
-    ok = swap_out(p);
-    if(ok)
-      p->frame = NULL;
-  }
-  }
+    ok = swap_out (p);
+  if (ok) 
+    {
+      //memset (p->frame->base, 0xcc, PGSIZE);
+      p->frame = NULL; 
+    }
   return ok;
 }
 
@@ -242,7 +238,7 @@ page_deallocate (void *vaddr)
     {
       struct frame *f = p->frame;
       if (p->file && !p->private) 
-        page_out (p);
+        page_out (p); 
       frame_free (f);
     }
   hash_delete (thread_current ()->pages, &p->hash_elem);
@@ -296,4 +292,3 @@ page_unlock (const void *addr)
   ASSERT (p != NULL);
   frame_unlock (p->frame);
 }
-

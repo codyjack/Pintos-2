@@ -100,7 +100,6 @@ try_frame_alloc_and_lock (struct page *page)
   return NULL;
 }
 
-
 /* Tries really hard to allocate and lock a frame for PAGE.
    Returns the frame if successful, false on failure. */
 struct frame *

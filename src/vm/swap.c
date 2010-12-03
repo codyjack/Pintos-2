@@ -4,10 +4,11 @@
 #include <stdio.h>
 #include "vm/frame.h"
 #include "vm/page.h"
+#include "devices/block.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 
-/* The swap device. */
+/* The swap partition. */
 static struct block *swap_device;
 
 /* Used swap pages. */
@@ -72,17 +73,10 @@ swap_out (struct page *p)
     return false; 
 
   p->sector = slot * PAGE_SECTORS;
-
-  // Write out page sectors
-/* add code here */
-  for(i = 0; i < PAGE_SECTORS; i++)
-  {
-  block_write(swap_device, p->sector + i, p->frame->base + i * BLOCK_SECTOR_SIZE);
-  }
-
-//  bitmap_mark(swap_bitmap, p->sector/PAGE_SECTORS);
- // p->sector = (block_sector_t)-1;
-
+  for (i = 0; i < PAGE_SECTORS; i++)
+    block_write (swap_device, p->sector + i,
+                 p->frame->base + i * BLOCK_SECTOR_SIZE);
+  
   p->private = false;
   p->file = NULL;
   p->file_offset = 0;

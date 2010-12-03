@@ -481,6 +481,7 @@ init_thread (struct thread *t, const char *name, int priority, tid_t tid)
   list_init (&t->fds);
   list_init (&t->mappings);
   t->next_handle = 2;
+  t->wd = NULL;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
 }

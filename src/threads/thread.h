@@ -115,6 +115,7 @@ struct thread
     struct list mappings;               /* Memory-mapped files. */
     int next_handle;                    /* Next handle value. */
     void *user_esp;                     /* User's stack pointer. */
+    struct dir *wd;                     /* Working directory. */
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

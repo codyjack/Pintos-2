@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <list.h>
+#include "filesys/free-map.h"
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
@@ -21,12 +22,39 @@ struct dir_entry
     bool in_use;                        /* In use or free? */
   };
 
-/* Creates a directory with space for ENTRY_CNT entries in the
-   given SECTOR.  Returns true if successful, false on failure. */
-bool
-dir_create (block_sector_t sector, size_t entry_cnt)
+/* Creates a directory in the given SECTOR.
+   The directory's parent is in PARENT_SECTOR.
+   Returns inode of created directory if successful,
+   null pointer on faiilure.
+   On failure, SECTOR is released in the free map. */
+struct inode *
+dir_create (block_sector_t sector, block_sector_t parent_sector)
 {
-  return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+  struct inode *inode = inode_create (sector, DIR_INODE);
+  if (inode != NULL) 
+    {
+      struct dir_entry entries[2];
+
+      memset (entries, 0, sizeof entries);
+
+      /* "." entry. */
+      entries[0].inode_sector = sector;
+      strlcpy (entries[0].name, ".", sizeof entries[0].name);
+      entries[0].in_use = true;
+
+      /* ".." entry. */
+      entries[1].inode_sector = parent_sector;
+      strlcpy (entries[1].name, "..", sizeof entries[1].name);
+      entries[1].in_use = true;
+      
+      if (inode_write_at (inode, entries, sizeof entries, 0) != sizeof entries)
+        {
+          inode_remove (inode);
+          inode_close (inode); 
+          inode = NULL;
+        } 
+    }
+  return inode;
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -35,7 +63,7 @@ struct dir *
 dir_open (struct inode *inode) 
 {
   struct dir *dir = calloc (1, sizeof *dir);
-  if (inode != NULL && dir != NULL)
+  if (inode != NULL && dir != NULL && inode_get_type (inode) == DIR_INODE)
     {
       dir->inode = inode;
       dir->pos = 0;
@@ -84,10 +112,8 @@ dir_get_inode (struct dir *dir)
 }
 
 /* Searches DIR for a file with the given NAME.
-   If successful, returns true, sets *EP to the directory entry
-   if EP is non-null, and sets *OFSP to the byte offset of the
-   directory entry if OFSP is non-null.
-   otherwise, returns false and ignores EP and OFSP. */
+   If successful, returns the file's entry;
+   otherwise, returns a null pointer. */
 static bool
 lookup (const struct dir *dir, const char *name,
         struct dir_entry *ep, off_t *ofsp) 
@@ -120,15 +146,16 @@ dir_lookup (const struct dir *dir, const char *name,
             struct inode **inode) 
 {
   struct dir_entry e;
+  bool ok;
 
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
-  if (lookup (dir, name, &e, NULL))
-    *inode = inode_open (e.inode_sector);
-  else
-    *inode = NULL;
+  inode_lock (dir->inode);
+  ok = lookup (dir, name, &e, NULL);
+  inode_unlock (dir->inode);
 
+  *inode = ok ? inode_open (e.inode_sector) : NULL;
   return *inode != NULL;
 }
 
@@ -149,10 +176,11 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   ASSERT (name != NULL);
 
   /* Check NAME for validity. */
-  if (*name == '\0' || strlen (name) > NAME_MAX)
+  if (*name == '\0' || strchr (name, '/') || strlen (name) > NAME_MAX)
     return false;
 
   /* Check that NAME is not in use. */
+  inode_lock (dir->inode);
   if (lookup (dir, name, NULL, NULL))
     goto done;
 
@@ -175,6 +203,7 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
 
  done:
+  inode_unlock (dir->inode);
   return success;
 }
 
@@ -192,7 +221,12 @@ dir_remove (struct dir *dir, const char *name)
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  /* Don't allow . or .. to be removed */
+
+  // ADD CODE HERE
+
   /* Find directory entry. */
+  inode_lock (dir->inode);
   if (!lookup (dir, name, &e, &ofs))
     goto done;
 
@@ -200,6 +234,10 @@ dir_remove (struct dir *dir, const char *name)
   inode = inode_open (e.inode_sector);
   if (inode == NULL)
     goto done;
+
+  /* Verify that it is not an in-use or non-empty directory. */
+
+  // ADD CODE HERE
 
   /* Erase directory entry. */
   e.in_use = false;
@@ -211,6 +249,7 @@ dir_remove (struct dir *dir, const char *name)
   success = true;
 
  done:
+  inode_unlock (dir->inode);
   inode_close (inode);
   return success;
 }
@@ -223,14 +262,17 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 {
   struct dir_entry e;
 
+  inode_lock (dir->inode);
   while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e) 
     {
       dir->pos += sizeof e;
-      if (e.in_use)
+      if (e.in_use && strcmp (e.name, ".") && strcmp (e.name, ".."))
         {
+          inode_unlock (dir->inode);
           strlcpy (name, e.name, NAME_MAX + 1);
           return true;
         } 
     }
+  inode_unlock (dir->inode);
   return false;
 }

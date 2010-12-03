@@ -32,6 +32,7 @@ struct exec_info
     const char *file_name;              /* Program to load. */
     struct semaphore load_done;         /* "Up"ed when loading complete. */
     struct wait_status *wait_status;    /* Child process. */
+    struct dir *wd;                     /* Working directory. */
     bool success;                       /* Program successfully loaded? */
   };
 
@@ -42,6 +43,7 @@ struct exec_info
 tid_t
 process_execute (const char *file_name) 
 {
+  struct dir *wd = thread_current ()->wd;
   struct exec_info exec;
   char thread_name[16];
   char *save_ptr;
@@ -49,6 +51,9 @@ process_execute (const char *file_name)
 
   /* Initialize exec_info. */
   exec.file_name = file_name;
+  exec.wd = wd != NULL ? dir_reopen (wd) : dir_open_root ();
+  if (exec.wd == NULL)
+    return TID_ERROR;
   sema_init (&exec.load_done, 0);
 
   /* Create a new thread to execute FILE_NAME. */
@@ -61,8 +66,13 @@ process_execute (const char *file_name)
       if (exec.success)
         list_push_back (&thread_current ()->children, &exec.wait_status->elem);
       else 
-        tid = TID_ERROR;
+        {
+          tid = TID_ERROR;
+          /* Don't close exec.wd; child process will have done so. */
+        }
     }
+  else
+    dir_close (exec.wd);
 
   return tid;
 }
@@ -75,6 +85,8 @@ start_process (void *exec_)
   struct exec_info *exec = exec_;
   struct intr_frame if_;
   bool success;
+
+  thread_current ()->wd = exec->wd;
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -334,13 +346,13 @@ load (const char *cmd_line, void (**eip) (void), void **esp)
     *cp = '\0';
 
   /* Open executable file. */
-  t->bin_file = file = filesys_open (file_name);
+  t->bin_file = file = file_open (filesys_open (file_name));
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
-  file_deny_write (t->bin_file);
+  file_deny_write (file);
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
